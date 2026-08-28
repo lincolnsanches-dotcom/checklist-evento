@@ -83,7 +83,7 @@ async function analisarFotosComIA() {
     obsField.value += avisoTemp;
 
     try {
-      // Usando estritamente a linha do gemini-2.0-flashconst res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
+      // Usando estritamente a linha do gemini-3.6-flashconst res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
 const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
   method: 'POST',
   headers: { 
