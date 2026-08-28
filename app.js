@@ -21,7 +21,7 @@ function trocarAba(nomeAba) {
   }
 }
 
-// 1. CARREGAMENTO RÁPIDO DAS FOTOS COM COMPRESSÃO OTIMIZADA
+// 1. CARREGAMENTO RÁPIDO DAS FOTOS (SEM IA AUTOMÁTICA)
 function mostrarPrevia(event) {
   const container = document.getElementById('preview-container');
   const files = event.target.files;
@@ -36,15 +36,15 @@ function mostrarPrevia(event) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // Reduzido para 400px max (perfeito para IA e extremamente leve de subir)
-        const maxWidth = 400;
+        const maxWidth = 500;
         const scale = maxWidth / img.width;
         canvas.width = maxWidth;
         canvas.height = img.height * scale;
 
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const compressedData = canvas.toDataURL('image/jpeg', 0.5);
+        const compressedData = canvas.toDataURL('image/jpeg', 0.6);
 
+        // Salva com a flag analisada = false
         imagensBase64.push({
           data: compressedData,
           analisada: false
@@ -61,19 +61,17 @@ function mostrarPrevia(event) {
   event.target.value = '';
 }
 
-// 2. ANÁLISE ULTRA-RÁPIDA EM PARALELO (PROMISE.ALL)
+// 2. ANÁLISE MANUAL AO CLICAR NO BOTÃO DE IA (APENAS FOTOS NÃO ANALISADAS)
 async function analisarFotosComIA() {
   if (imagensBase64.length === 0) {
     alert("Selecione pelo menos uma foto antes de analisar!");
     return;
   }
 
-  // Mapeia os índices de fotos que ainda NÃO foram analisadas
-  const indicesPendentes = imagensBase64
-    .map((item, idx) => (!item.analisada ? idx : null))
-    .filter(idx => idx !== null);
+  // Filtra imagens que ainda não foram analisadas
+  const fotosPendentes = imagensBase64.filter(item => !item.analisada);
 
-  if (indicesPendentes.length === 0) {
+  if (fotosPendentes.length === 0) {
     alert("Todas as fotos selecionadas já foram analisadas!");
     return;
   }
@@ -82,26 +80,26 @@ async function analisarFotosComIA() {
   const obsField = document.getElementById('observacoes');
 
   btnIA.disabled = true;
-  btnIA.innerText = "⚡ Analisando fotos em paralelo...";
+  btnIA.innerText = "⏳ Analisando novas imagens...";
 
   const parte1 = "AQ.Ab8RN6JTITegcGq4pbDx";
   const parte2 = "Yll0te0-txji8zOUFfE82PTX_86SMw";
   const apiKey = parte1 + parte2;
 
-  // Mostra avisos temporários de carregamento no campo
-  indicesPendentes.forEach(index => {
-    obsField.value += (obsField.value.trim() ? "\n" : "") + `🔍 Analisando foto ${index + 1}...`;
-  });
-
-  // Função interna para requisição individual
-  const analisarUnicaFoto = async (index) => {
+  for (let index = 0; index < imagensBase64.length; index++) {
     const itemFoto = imagensBase64[index];
+
+    // Se já foi analisada antes, pula para a próxima foto sem chamar a API
+    if (itemFoto.analisada) continue;
+
     const base64Clean = itemFoto.data.replace(/^data:image\/\w+;base64,/, '');
     const numeroFoto = index + 1;
-    const avisoTemp = `🔍 Analisando foto ${numeroFoto}...`;
+
+    const avisoTemp = (obsField.value.trim() ? "\n" : "") + `🔍 Analisando foto ${numeroFoto}...`;
+    obsField.value += avisoTemp;
 
     try {
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent", {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -119,22 +117,25 @@ async function analisarFotosComIA() {
 
       const data = await res.json();
 
+      if (!res.ok) {
+        throw new Error(data.error?.message || "Erro na comunicação com a API");
+      }
+
       let alimento = "Item não identificado";
-      if (res.ok && data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
         alimento = data.candidates[0].content.parts[0].text.trim();
       }
 
-      obsField.value = obsField.value.replace(avisoTemp, `- Foto ${numeroFoto}: ${alimento}`);
+      // Substitui o texto de carregamento pela resposta e marca a foto como analisada
+      obsField.value = obsField.value.replace(avisoTemp, (obsField.value.startsWith("🔍") ? "" : "\n") + `- Foto ${numeroFoto}: ${alimento}`);
       itemFoto.analisada = true;
 
     } catch (err) {
-      console.error(`Erro na foto ${numeroFoto}:`, err);
-      obsField.value = obsField.value.replace(avisoTemp, `- Foto ${numeroFoto}: Falha no envio`);
+      console.error("Erro na IA:", err);
+      obsField.value = obsField.value.replace(avisoTemp, '');
+      alert(`⚠️ Erro na foto ${numeroFoto}: ${err.message}`);
     }
-  };
-
-  // Dispara todas as requisições simultaneamente!
-  await Promise.all(indicesPendentes.map(index => analisarUnicaFoto(index)));
+  }
 
   btnIA.disabled = false;
   btnIA.innerText = "✅ Análise Concluída!";
@@ -179,6 +180,7 @@ async function processarEGerar() {
     if(document.getElementById('item-bebidas').checked) itens.push("Estação de bebidas e gelo ok");
     if(document.getElementById('item-placas').checked) itens.push("Placas de identificação nos pratos");
 
+    // Extrai apenas as strings Base64 puras das imagens para salvar/gerar o PDF
     const fotosArray = imagensBase64.map(imgObj => imgObj.data);
 
     const novoRegistro = {
@@ -250,7 +252,7 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   doc.setFillColor(0, 70, 63);
   doc.rect(0, 0, 210, 28, 'F');
 
-  const logoBase64 = await carregarLogoBase64('logo.png');
+  const logoBase64 = await carregarLogoBase64('logo1.png');
   let startXText = 14;
 
   if (logoBase64) {
@@ -303,6 +305,7 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     doc.setFont('helvetica', 'normal');
     y += 6;
     
+    // Remove caracteres especiais/emojis que corrompem a codificacao do jsPDF
     const obsTratado = observacoes.replace(/[^\x00-\x7F\xA0-\xFF]/g, '');
     const lines = doc.splitTextToSize(obsTratado, 180);
     doc.text(lines, 14, y);
