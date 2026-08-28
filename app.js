@@ -252,7 +252,7 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   doc.setFillColor(0, 70, 63);
   doc.rect(0, 0, 210, 28, 'F');
 
-  const logoBase64 = await carregarLogoBase64('logo.png');
+  const logoBase64 = await carregarLogoBase64('logo1.png');
   let startXText = 14;
 
   if (logoBase64) {
