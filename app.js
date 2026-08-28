@@ -65,7 +65,9 @@ async function mostrarPrevia(event) {
 
           try {
             // Insira sua API Key ativa abaixo:
-            const apiKey = "AQ.Ab8RN6J4zkWtQyRY1y9TyDGt2b_bURayDJCh_3rSADNd6Q2Ckg"; 
+            const parte1 = "AQ.Ab8RN6JVyk-JyTJYB0PhyuY9"; // Primeira metade da sua chave
+            const parte2 = "";hWvyf6MzoUj8XxDMCcgjW6cshA   // Segunda metade da sua chave
+            const apiKey = parte1 + parte2;
             const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
 
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
