@@ -121,11 +121,16 @@
           <p class="subtitle">Tire fotos do local montado para o relatório</p>
 
           <div class="file-input-wrapper">
-            <label for="fotos" class="btn-camera">
-              📷 Tirar Foto / Selecionar Imagens
-            </label>
-            <input type="file" id="fotos" accept="image/*" capture="environment" multiple onchange="mostrarPrevia(event)">
-          </div>
+  <label for="fotos" class="btn-camera">
+    📷 Tirar Foto / Selecionar Imagens
+  </label>
+  <input type="file" id="fotos" accept="image/*" capture="environment" multiple style="display:none;" onchange="mostrarPrevia(event)">
+</div>
+
+<!-- NOVO BOTÃO AQUI -->
+<button type="button" id="btn-ia" onclick="analisarFotosComIA()" style="margin-top: 10px; background-color: #6366f1; color: white; padding: 12px; border: none; border-radius: 6px; width: 100%; cursor: pointer; font-weight: bold; font-size: 0.95rem;">
+  🔍 Identificar Pratos com IA
+</button>
 
           <div id="preview-container" class="preview-container">
             <!-- Prévia de Imagens -->
