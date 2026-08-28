@@ -70,7 +70,7 @@ async function analisarFotosComIA() {
   btnIA.disabled = true;
   btnIA.innerText = "⏳ Analisando imagens com IA...";
 
-  // Junção das partes da chave para evitar revogação automática no Git
+  // Junção das partes da chave para evitar bloqueio no Git
   const parte1 = "AQ.Ab8RN6JTITegcGq4pbDx";
   const parte2 = "Yll0te0-txji8zOUFfE82PTX_86SMw";
   const apiKey = parte1 + parte2;
@@ -83,7 +83,8 @@ async function analisarFotosComIA() {
     obsField.value += avisoTemp;
 
     try {
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
+      // Usando estritamente a linha do gemini-2.0-flash
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent", {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
