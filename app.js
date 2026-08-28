@@ -21,7 +21,7 @@ function trocarAba(nomeAba) {
   }
 }
 
-// Acumula cada foto tirada e analisa o alimento via Vercel + Gemini AI
+// Acumula cada foto e analisa com o Gemini diretamente no Front-end
 async function mostrarPrevia(event) {
   const container = document.getElementById('preview-container');
   const files = event.target.files;
@@ -49,7 +49,6 @@ async function mostrarPrevia(event) {
 
           imagensBase64.push(compressedData);
 
-          // Elemento de imagem com efeito de carregamento
           const previewImg = document.createElement('img');
           previewImg.src = compressedData;
           previewImg.classList.add('img-preview');
@@ -60,22 +59,33 @@ async function mostrarPrevia(event) {
           obsField.value += avisoTemp;
 
           try {
-            // Chamada para a Serverless Function na Vercel
-            const res = await fetch('/api/analisar', {
+            // Chamada direta para a API do Gemini
+            const apiKey = window.env?.GEMINI_API_KEY || "";
+            const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
+
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ imageBase64: compressedData })
+              body: JSON.stringify({
+                contents: [{
+                  parts: [
+                    { text: 'Identifique o prato ou alimento na imagem. Responda APENAS o nome do alimento em português (ex: "Strogonoff de Frango", "Batata Sauté"). Se não for alimento, responda "Item não identificado".' },
+                    { inline_data: { mime_type: 'image/jpeg', data: base64Clean } }
+                  ]
+                }]
+              })
             });
 
             const data = await res.json();
 
-            if (data.alimento) {
-              obsField.value = obsField.value.replace(avisoTemp, `\n• Prato na foto: ${data.alimento}`);
+            if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+              const alimento = data.candidates[0].content.parts[0].text.trim();
+              obsField.value = obsField.value.replace(avisoTemp, `\n• Prato na foto: ${alimento}`);
             } else {
               obsField.value = obsField.value.replace(avisoTemp, '');
             }
           } catch (err) {
-            console.error("Erro no reconhecimento da IA:", err);
+            console.error("Erro na IA:", err);
             obsField.value = obsField.value.replace(avisoTemp, '');
           } finally {
             previewImg.style.opacity = '1';
@@ -195,11 +205,9 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  // Fundo do Cabeçalho
   doc.setFillColor(0, 70, 63);
   doc.rect(0, 0, 210, 28, 'F');
 
-  // Adicionar Logo
   const logoBase64 = await carregarLogoBase64('logo.png');
   let startXText = 14;
 
@@ -212,7 +220,6 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     }
   }
 
-  // Título e Subtítulo
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
@@ -222,7 +229,6 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   doc.setFont('helvetica', 'normal');
   doc.text("Comprovante de Vistoria e Montagem de Eventos", startXText, 19);
 
-  // Informações Gerais
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(11);
   let y = 38;
@@ -235,7 +241,6 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   y += 6; doc.text(`• Responsável: ${responsavel}`, 14, y);
   y += 6; doc.text(`• Data/Hora: ${dataHora}`, 14, y);
 
-  // Itens
   y += 10;
   doc.setFont('helvetica', 'bold');
   doc.text("Itens Conferidos:", 14, y);
@@ -249,7 +254,6 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     });
   }
 
-  // Observações
   if (observacoes) {
     y += 10;
     doc.setFont('helvetica', 'bold');
@@ -261,7 +265,6 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     y += (lines.length * 5);
   }
 
-  // Fotos
   if (fotos && fotos.length > 0) {
     y += 10;
     if (y > 220) { doc.addPage(); y = 20; }
@@ -293,7 +296,6 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     });
   }
 
-  // Rodapé do Desenvolvedor em todas as páginas
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
