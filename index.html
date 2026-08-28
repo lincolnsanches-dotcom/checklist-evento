@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checklist de Eventos - Bourbon Resort</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <header class="app-header">
+  <img src="logo1.png" alt="Logo Bourbon" class="app-logo">
+  <div class="logo-title">
+    <h1>Bourbon Resort Atibaia</h1>
+    <p>Checklist de Montagem & Entrega de Eventos</p>
+  </div>
+</header>
+
+    <!-- NAVEGAÇÃO POR ABAS -->
+    <div class="tabs">
+      <button type="button" id="btn-tab-novo" class="tab-btn active" onclick="trocarAba('novo')">📝 Novo Checklist</button>
+      <button type="button" id="btn-tab-historico" class="tab-btn" onclick="trocarAba('historico')">📋 Histórico Salvo</button>
+    </div>
+
+    <!-- ABA 1: FORMULÁRIO DE CHECKLIST -->
+    <div id="aba-novo" class="tab-content active">
+      <form id="checklist-form" onsubmit="event.preventDefault(); processarEGerar();">
+        
+        <!-- 1. IDENTIFICAÇÃO -->
+        <section class="card">
+          <h2>1. Identificação do Evento</h2>
+          
+          <div class="input-group">
+            <label for="evento">Nome do Evento *</label>
+            <input type="text" id="evento" placeholder="Ex: Convenção de Vendas 2026" required>
+          </div>
+
+          <div class="input-group">
+            <label for="local">Local do Evento no Resort *</label>
+            <select id="local" required>
+              <option value="">-- Selecione o Local --</option>
+              <option value="Ambulatório">Ambulatório</option>
+                            <option value="Arujá">Arujá</option>
+                            <option value="Ballroom A">Ballroom A</option>
+                            <option value="Ballroom B">Ballroom B</option>
+                            <option value="Ballroom C">Ballroom C</option>
+                            <option value="Board Room">Board Room</option>
+                            <option value="Bourbon Club">Bourbon Club</option>
+                            <option value="Bragança">Bragança</option>
+                            <option value="Campinas">Campinas</option>
+                            <option value="Carteado">Carteado</option>
+                            <option value="Embu">Embu</option>
+                            <option value="Foyer Piso C">Foyer Piso C</option>
+                            <option value="Foyer Piso E">Foyer Piso E</option>
+                            <option value="Foyer Piso M">Foyer Piso M</option>
+                            <option value="Grand Ballroom Garden">Grand Ballroom Garden</option>
+                            <option value="Itatiba">Itatiba</option>
+                            <option value="Itu">Itu</option>
+                            <option value="Itupeva">Itupeva</option>
+                            <option value="Jundiaí">Jundiaí</option>
+                            <option value="Lobby">Lobby</option>
+                            <option value="Londrina">Londrina</option>
+                            <option value="Mairiporã">Mairiporã</option>
+                            <option value="Mauá">Mauá</option>
+                            <option value="Piracicaba">Piracicaba</option>
+                            <option value="Poá">Poá</option>
+                            <option value="Praça Palmeiras">Praça Palmeiras</option>
+                            <option value="São Paulo">São Paulo</option>
+                            <option value="Skyline">Skyline</option>
+                            <option value="Sorocaba">Sorocaba</option>
+                            <option value="Theatro Bourbon">Theatro Bourbon</option>
+              <option value="Outro (Especificar nas observações)">Outro Local</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="responsavel">Responsável pela Montagem *</label>
+            <input type="text" id="responsavel" placeholder="Seu nome completo" required>
+          </div>
+        </section>
+
+        <!-- 2. CHECKLIST DE ITENS -->
+        <section class="card">
+          <h2>2. Itens Conferidos</h2>
+          <p class="subtitle">Marque tudo o que foi vistoriado na entrega:</p>
+
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="item-rechauds" value="Rechauds conferidos e acesos">
+              <span>Rechauds solicitados montados</span>
+            </label>
+
+            <label class="checkbox-item">
+              <input type="checkbox" id="item-buffet" value="Buffet/Comidas dispostas">
+              <span>Fogareiro ok</span>
+            </label>
+
+            <label class="checkbox-item">
+              <input type="checkbox" id="item-bebidas" value="Bebidas e gelo abastecidos">
+              <span>Agua ok</span>
+            </label>
+
+            <label class="checkbox-item">
+              <input type="checkbox" id="item-placas" value="Placas de identificação dispostas">
+              <span>Altura ok</span>
+            </label>
+          </div>
+
+          <div class="input-group" style="margin-top: 15px;">
+            <label for="observacoes">Observações Gerais</label>
+            <textarea id="observacoes" rows="3" placeholder="Insira detalhes adicionais ou avisos do evento..."></textarea>
+          </div>
+        </section>
+
+        <!-- 3. FOTOS -->
+        <section class="card">
+          <h2>3. Comprovação Fotográfica</h2>
+          <p class="subtitle">Tire fotos do local montado para o relatório</p>
+
+          <div class="file-input-wrapper">
+            <label for="fotos" class="btn-camera">
+              📷 Tirar Foto / Selecionar Imagens
+            </label>
+            <input type="file" id="fotos" accept="image/*" capture="environment" multiple onchange="mostrarPrevia(event)">
+          </div>
+
+          <div id="preview-container" class="preview-container">
+            <!-- Prévia de Imagens -->
+          </div>
+        </section>
+
+        <button type="submit" id="btn-salvar" class="btn-submit">
+          ✅ Finalizar, Salvar e Baixar PDF
+        </button>
+
+      </form>
+    </div>
+
+    <!-- ABA 2: HISTÓRICO -->
+    <div id="aba-historico" class="tab-content">
+      <section class="card">
+        <h2>Histórico de Registros</h2>
+        <p class="subtitle">Abaixo estão os checklists salvos neste dispositivo:</p>
+        
+        <div id="lista-historico" class="historico-list">
+          <!-- Registros renderizados por JS -->
+        </div>
+      </section>
+    </div><footer style="text-align: center; margin-top: 25px; color: #94a3b8; font-size: 0.8rem;">
+  Desenvolvido por Lincoln Sanches
+</footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
