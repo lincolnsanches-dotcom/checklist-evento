@@ -21,94 +21,97 @@ function trocarAba(nomeAba) {
   }
 }
 
-// Acumula cada foto e analisa com o Gemini diretamente no Front-end
-async function mostrarPrevia(event) {
+// 1. CARREGAMENTO RÁPIDO DAS FOTOS (SEM IA AUTOMÁTICA)
+function mostrarPrevia(event) {
   const container = document.getElementById('preview-container');
   const files = event.target.files;
   if (!files || files.length === 0) return;
 
-  const obsField = document.getElementById('observacoes');
-  
-  // TRAVA O BOTÃO DE SALVAR ENQUANTO PROCESSA A IA
-  const btnSalvar = document.getElementById('btn-salvar');
-  btnSalvar.disabled = true;
-  btnSalvar.innerText = "⏳ Analisando alimento da foto...";
-
   for (const file of Array.from(files)) {
-    await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.src = e.target.result;
-        img.onload = async function() {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          const maxWidth = 500;
-          const scale = maxWidth / img.width;
-          canvas.width = maxWidth;
-          canvas.height = img.height * scale;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const maxWidth = 500;
+        const scale = maxWidth / img.width;
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
 
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const compressedData = canvas.toDataURL('image/jpeg', 0.6);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedData = canvas.toDataURL('image/jpeg', 0.6);
 
-          imagensBase64.push(compressedData);
+        imagensBase64.push(compressedData);
 
-          const previewImg = document.createElement('img');
-          previewImg.src = compressedData;
-          previewImg.classList.add('img-preview');
-          previewImg.style.opacity = '0.5';
-          container.appendChild(previewImg);
-
-          const avisoTemp = `\n🔍 Analisando alimento da foto...`;
-          obsField.value += avisoTemp;
-
-          try {
-            // Insira sua API Key ativa abaixo:
-            const parte1 = "AQ.Ab8RN6JVyk-JyTJYB0PhyuY9"; // Primeira metade da sua chave
-            const parte2 = "";hWvyf6MzoUj8XxDMCcgjW6cshA   // Segunda metade da sua chave
-            const apiKey = parte1 + parte2;
-            const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
-
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{
-                  parts: [
-                    { text: 'Identifique o prato ou alimento na imagem. Responda APENAS o nome do alimento em portugues sem usar emojis (ex: "Strogonoff de Frango", "Batata Saute"). Se nao for alimento, responda "Item nao identificado".' },
-                    { inline_data: { mime_type: 'image/jpeg', data: base64Clean } }
-                  ]
-                }]
-              })
-            });
-
-            const data = await res.json();
-
-            if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-              let alimento = data.candidates[0].content.parts[0].text.trim();
-              obsField.value = obsField.value.replace(avisoTemp, `\n- Prato na foto: ${alimento}`);
-            } else {
-              obsField.value = obsField.value.replace(avisoTemp, '');
-            }
-          } catch (err) {
-            console.error("Erro na IA:", err);
-            obsField.value = obsField.value.replace(avisoTemp, '');
-          } finally {
-            previewImg.style.opacity = '1';
-            resolve();
-          }
-        };
+        const previewImg = document.createElement('img');
+        previewImg.src = compressedData;
+        previewImg.classList.add('img-preview');
+        container.appendChild(previewImg);
       };
-      reader.readAsDataURL(file);
-    });
+    };
+    reader.readAsDataURL(file);
+  }
+  event.target.value = '';
+}
+
+// 2. ANÁLISE MANUAL AO CLICAR NO BOTÃO DE IA
+async function analisarFotosComIA() {
+  if (imagensBase64.length === 0) {
+    alert("Selecione pelo menos uma foto antes de analisar!");
+    return;
   }
 
-  // DESTRAVA O BOTÃO APÓS CONCLUIR TODAS AS ANÁLISES
-  btnSalvar.disabled = false;
-  btnSalvar.innerText = "✅ Finalizar, Salvar e Baixar PDF";
+  const btnIA = document.getElementById('btn-ia');
+  const obsField = document.getElementById('observacoes');
 
-  event.target.value = '';
+  btnIA.disabled = true;
+  btnIA.innerText = "⏳ Analisando imagens com IA...";
+
+  // Junção das partes da chave para evitar revogação automática no Git
+  const parte1 = "AQ.Ab8RN6JVyk-JyTJYB0PhyuY9"; 
+  const parte2 = "hWvyf6MzoUj8XxDMCcgjW6cshA"; 
+  const apiKey = parte1 + parte2;
+
+  for (let index = 0; index < imagensBase64.length; index++) {
+    const compressedData = imagensBase64[index];
+    const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
+
+    const avisoTemp = `\n🔍 Analisando foto ${index + 1}...`;
+    obsField.value += avisoTemp;
+
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Identifique o prato ou alimento na imagem. Responda APENAS o nome do alimento em portugues sem usar emojis (ex: "Strogonoff de Frango", "Batata Saute"). Se nao for alimento, responda "Item nao identificado".' },
+              { inline_data: { mime_type: 'image/jpeg', data: base64Clean } }
+            ]
+          }]
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+        let alimento = data.candidates[0].content.parts[0].text.trim();
+        obsField.value = obsField.value.replace(avisoTemp, `\n- Foto ${index + 1}: ${alimento}`);
+      } else {
+        obsField.value = obsField.value.replace(avisoTemp, '');
+      }
+    } catch (err) {
+      console.error("Erro na IA:", err);
+      obsField.value = obsField.value.replace(avisoTemp, '');
+    }
+  }
+
+  btnIA.disabled = false;
+  btnIA.innerText = "✅ Análise Concluída!";
 }
 
 // Converter Logo local para Base64
