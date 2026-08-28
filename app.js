@@ -60,7 +60,7 @@ async function mostrarPrevia(event) {
 
           try {
             // Chamada direta para a API do Gemini
-            const apiKey = window.env?.GEMINI_API_KEY || "";
+            const apiKey = "AQ.Ab8RN6KyEbR_pmotbptgOmpe5jEphFbjpC6i84v4HxcGILu5Xw";
             const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
 
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
