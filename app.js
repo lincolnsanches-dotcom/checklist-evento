@@ -84,18 +84,17 @@ async function analisarFotosComIA() {
 
     try {
       // Usando estritamente a linha do gemini-2.0-flash
-      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: 'Identifique o prato ou alimento na imagem. Responda APENAS o nome do alimento em portugues sem usar emojis (ex: "Strogonoff de Frango", "Batata Saute"). Se nao for alimento, responda "Item nao identificado".' },
-              { inline_data: { mime_type: 'image/jpeg', data: base64Clean } }
-            ]
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+  method: 'POST',
+  headers: { 
+    'Content-Type': 'application/json',
+    'x-goog-api-key': apiKey
+  },
+  body: JSON.stringify({
+    contents: [{
+      parts: [
+        { text: 'Identifique o prato ou alimento na imagem. Responda APENAS o nome do alimento em portugues sem usar emojis (ex: "Strogonoff de Frango", "Batata Saute"). Se nao for alimento, responda "Item nao identificado".' },
+        { inline_data: { mime_type: 'image/jpeg', data: base64Clean } }            ]
           }]
         })
       });
