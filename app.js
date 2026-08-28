@@ -1,5 +1,4 @@
-let imagensBase64 = [];
-let fotosAnalisadasCount = 0;
+let imagensBase64 = []; // Guarda objetos: { data: 'base64...', analisada: false }
 
 document.addEventListener("DOMContentLoaded", () => {
   carregarHistorico();
@@ -45,7 +44,11 @@ function mostrarPrevia(event) {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const compressedData = canvas.toDataURL('image/jpeg', 0.6);
 
-        imagensBase64.push(compressedData);
+        // Salva com a flag analisada = false
+        imagensBase64.push({
+          data: compressedData,
+          analisada: false
+        });
 
         const previewImg = document.createElement('img');
         previewImg.src = compressedData;
@@ -58,14 +61,17 @@ function mostrarPrevia(event) {
   event.target.value = '';
 }
 
-// 2. ANÁLISE MANUAL AO CLICAR NO BOTÃO DE IA
+// 2. ANÁLISE MANUAL AO CLICAR NO BOTÃO DE IA (APENAS FOTOS NÃO ANALISADAS)
 async function analisarFotosComIA() {
   if (imagensBase64.length === 0) {
     alert("Selecione pelo menos uma foto antes de analisar!");
     return;
   }
 
-  if (fotosAnalisadasCount >= imagensBase64.length) {
+  // Filtra imagens que ainda não foram analisadas
+  const fotosPendentes = imagensBase64.filter(item => !item.analisada);
+
+  if (fotosPendentes.length === 0) {
     alert("Todas as fotos selecionadas já foram analisadas!");
     return;
   }
@@ -74,18 +80,22 @@ async function analisarFotosComIA() {
   const obsField = document.getElementById('observacoes');
 
   btnIA.disabled = true;
-  btnIA.innerText = "⏳ Analisando imagens com IA...";
+  btnIA.innerText = "⏳ Analisando novas imagens...";
 
-  // Junção das partes da chave para evitar revogação automática no Git
-  const parte1 = "AQ.Ab8RN6JTITegcGq4pbDx"; 
+  const parte1 = "AQ.Ab8RN6JTITegcGq4pbDx";
   const parte2 = "Yll0te0-txji8zOUFfE82PTX_86SMw";
   const apiKey = parte1 + parte2;
 
-  for (let index = fotosAnalisadasCount; index < imagensBase64.length; index++) {
-    const compressedData = imagensBase64[index];
-    const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
+  for (let index = 0; index < imagensBase64.length; index++) {
+    const itemFoto = imagensBase64[index];
 
-    const avisoTemp = `\n🔍 Analisando foto ${index + 1}...`;
+    // Se já foi analisada antes, pula para a próxima foto sem chamar a API
+    if (itemFoto.analisada) continue;
+
+    const base64Clean = itemFoto.data.replace(/^data:image\/\w+;base64,/, '');
+    const numeroFoto = index + 1;
+
+    const avisoTemp = (obsField.value.trim() ? "\n" : "") + `🔍 Analisando foto ${numeroFoto}...`;
     obsField.value += avisoTemp;
 
     try {
@@ -111,19 +121,19 @@ async function analisarFotosComIA() {
         throw new Error(data.error?.message || "Erro na comunicação com a API");
       }
 
+      let alimento = "Item não identificado";
       if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-        let alimento = data.candidates[0].content.parts[0].text.trim();
-        obsField.value = obsField.value.replace(avisoTemp, `\n- Foto ${index + 1}: ${alimento}`);
-      } else {
-        obsField.value = obsField.value.replace(avisoTemp, `\n- Foto ${index + 1}: Item não identificado`);
+        alimento = data.candidates[0].content.parts[0].text.trim();
       }
 
-      fotosAnalisadasCount = index + 1;
+      // Substitui o texto de carregamento pela resposta e marca a foto como analisada
+      obsField.value = obsField.value.replace(avisoTemp, (obsField.value.startsWith("🔍") ? "" : "\n") + `- Foto ${numeroFoto}: ${alimento}`);
+      itemFoto.analisada = true;
 
     } catch (err) {
       console.error("Erro na IA:", err);
       obsField.value = obsField.value.replace(avisoTemp, '');
-      alert(`⚠️ Erro na foto ${index + 1}: ${err.message}`);
+      alert(`⚠️ Erro na foto ${numeroFoto}: ${err.message}`);
     }
   }
 
@@ -170,6 +180,9 @@ async function processarEGerar() {
     if(document.getElementById('item-bebidas').checked) itens.push("Estação de bebidas e gelo ok");
     if(document.getElementById('item-placas').checked) itens.push("Placas de identificação nos pratos");
 
+    // Extrai apenas as strings Base64 puras das imagens para salvar/gerar o PDF
+    const fotosArray = imagensBase64.map(imgObj => imgObj.data);
+
     const novoRegistro = {
       id: Date.now(),
       evento: evento,
@@ -178,7 +191,7 @@ async function processarEGerar() {
       dataHora: dataHora,
       itens: itens,
       observacoes: observacoes,
-      fotos: [...imagensBase64]
+      fotos: fotosArray
     };
 
     let historico = JSON.parse(localStorage.getItem('bourbon_checklists') || '[]');
@@ -191,14 +204,13 @@ async function processarEGerar() {
       localStorage.setItem('bourbon_checklists', JSON.stringify(historico));
     }
 
-    await gerarPDF(evento, local, responsavel, dataHora, itens, observacoes, imagensBase64);
+    await gerarPDF(evento, local, responsavel, dataHora, itens, observacoes, fotosArray);
 
     alert("✅ Checklist registrado e PDF baixado!");
 
     document.getElementById('checklist-form').reset();
     document.getElementById('preview-container').innerHTML = '';
     imagensBase64 = [];
-    fotosAnalisadasCount = 0;
 
   } catch (error) {
     alert("Erro ao processar: " + error.message);
