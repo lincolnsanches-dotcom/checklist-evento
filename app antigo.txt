@@ -21,71 +21,39 @@ function trocarAba(nomeAba) {
   }
 }
 
-// Acumula cada foto tirada e analisa o alimento via Vercel + Gemini AI
-async function mostrarPrevia(event) {
+// Acumula cada foto tirada
+function mostrarPrevia(event) {
   const container = document.getElementById('preview-container');
   const files = event.target.files;
   if (!files || files.length === 0) return;
 
-  const obsField = document.getElementById('observacoes');
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const maxWidth = 500;
+        const scale = maxWidth / img.width;
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
 
-  for (const file of Array.from(files)) {
-    await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const img = new Image();
-        img.src = e.target.result;
-        img.onload = async function() {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          const maxWidth = 500;
-          const scale = maxWidth / img.width;
-          canvas.width = maxWidth;
-          canvas.height = img.height * scale;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedData = canvas.toDataURL('image/jpeg', 0.6);
 
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const compressedData = canvas.toDataURL('image/jpeg', 0.6);
+        imagensBase64.push(compressedData);
 
-          imagensBase64.push(compressedData);
-
-          // Elemento de imagem com efeito de carregamento
-          const previewImg = document.createElement('img');
-          previewImg.src = compressedData;
-          previewImg.classList.add('img-preview');
-          previewImg.style.opacity = '0.5';
-          container.appendChild(previewImg);
-
-          const avisoTemp = `\n🔍 Analisando alimento da foto...`;
-          obsField.value += avisoTemp;
-
-          try {
-            // Chamada para a Serverless Function na Vercel
-            const res = await fetch('/api/analisar', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ imageBase64: compressedData })
-            });
-
-            const data = await res.json();
-
-            if (data.alimento) {
-              obsField.value = obsField.value.replace(avisoTemp, `\n• Prato na foto: ${data.alimento}`);
-            } else {
-              obsField.value = obsField.value.replace(avisoTemp, '');
-            }
-          } catch (err) {
-            console.error("Erro no reconhecimento da IA:", err);
-            obsField.value = obsField.value.replace(avisoTemp, '');
-          } finally {
-            previewImg.style.opacity = '1';
-            resolve();
-          }
-        };
+        const previewImg = document.createElement('img');
+        previewImg.src = compressedData;
+        previewImg.classList.add('img-preview');
+        container.appendChild(previewImg);
       };
-      reader.readAsDataURL(file);
-    });
-  }
+    };
+    reader.readAsDataURL(file);
+  });
 
   event.target.value = '';
 }
@@ -104,7 +72,7 @@ function carregarLogoBase64(url) {
       resolve(canvas.toDataURL('image/png'));
     };
     img.onerror = function () {
-      resolve(null);
+      resolve(null); // Caso não encontre a logo.png, prossegue sem travar
     };
     img.src = url;
   });
@@ -199,7 +167,7 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   doc.setFillColor(0, 70, 63);
   doc.rect(0, 0, 210, 28, 'F');
 
-  // Adicionar Logo
+  // Adicionar Logo se existir na pasta (logo.png)
   const logoBase64 = await carregarLogoBase64('logo.png');
   let startXText = 14;
 
@@ -293,7 +261,7 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     });
   }
 
-  // Rodapé do Desenvolvedor em todas as páginas
+  // Rodapé do Desenvolvedor em todas as páginas do PDF
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
