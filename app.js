@@ -59,7 +59,6 @@ async function mostrarPrevia(event) {
           obsField.value += avisoTemp;
 
           try {
-            // Chamada direta para a API do Gemini
             const apiKey = "AQ.Ab8RN6KyEbR_pmotbptgOmpe5jEphFbjpC6i84v4HxcGILu5Xw";
             const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
 
@@ -69,7 +68,7 @@ async function mostrarPrevia(event) {
               body: JSON.stringify({
                 contents: [{
                   parts: [
-                    { text: 'Identifique o prato ou alimento na imagem. Responda APENAS o nome do alimento em português (ex: "Strogonoff de Frango", "Batata Sauté"). Se não for alimento, responda "Item não identificado".' },
+                    { text: 'Identifique o prato ou alimento na imagem. Responda APENAS o nome do alimento em portugues sem usar emojis (ex: "Strogonoff de Frango", "Batata Saute"). Se nao for alimento, responda "Item nao identificado".' },
                     { inline_data: { mime_type: 'image/jpeg', data: base64Clean } }
                   ]
                 }]
@@ -79,8 +78,8 @@ async function mostrarPrevia(event) {
             const data = await res.json();
 
             if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
-              const alimento = data.candidates[0].content.parts[0].text.trim();
-              obsField.value = obsField.value.replace(avisoTemp, `\n• Prato na foto: ${alimento}`);
+              let alimento = data.candidates[0].content.parts[0].text.trim();
+              obsField.value = obsField.value.replace(avisoTemp, `\n- Prato na foto: ${alimento}`);
             } else {
               obsField.value = obsField.value.replace(avisoTemp, '');
             }
@@ -233,12 +232,12 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   doc.setFontSize(11);
   let y = 38;
   doc.setFont('helvetica', 'bold');
-  doc.text("Informações da Entrega:", 14, y);
+  doc.text("Informacoes da Entrega:", 14, y);
   
   doc.setFont('helvetica', 'normal');
   y += 7; doc.text(`• Evento: ${evento}`, 14, y);
   y += 6; doc.text(`• Local no Resort: ${local}`, 14, y);
-  y += 6; doc.text(`• Responsável: ${responsavel}`, 14, y);
+  y += 6; doc.text(`• Responsavel: ${responsavel}`, 14, y);
   y += 6; doc.text(`• Data/Hora: ${dataHora}`, 14, y);
 
   y += 10;
@@ -257,10 +256,12 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
   if (observacoes) {
     y += 10;
     doc.setFont('helvetica', 'bold');
-    doc.text("Observações Gerais:", 14, y);
+    doc.text("Observacoes Gerais:", 14, y);
     doc.setFont('helvetica', 'normal');
     y += 6;
-    const lines = doc.splitTextToSize(observacoes, 180);
+    // Remove caracteres especiais/emojis que corrompem a codificacao do jsPDF
+    const obsTratado = observacoes.replace(/[^\x00-\x7F\xA0-\xFF]/g, '');
+    const lines = doc.splitTextToSize(obsTratado, 180);
     doc.text(lines, 14, y);
     y += (lines.length * 5);
   }
@@ -270,7 +271,7 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     if (y > 220) { doc.addPage(); y = 20; }
 
     doc.setFont('helvetica', 'bold');
-    doc.text("Registro Fotográfico:", 14, y);
+    doc.text("Registro Fotografico:", 14, y);
     y += 8;
 
     let x = 14;
