@@ -28,6 +28,11 @@ async function mostrarPrevia(event) {
   if (!files || files.length === 0) return;
 
   const obsField = document.getElementById('observacoes');
+  
+  // TRAVA O BOTÃO DE SALVAR ENQUANTO PROCESSA A IA
+  const btnSalvar = document.getElementById('btn-salvar');
+  btnSalvar.disabled = true;
+  btnSalvar.innerText = "⏳ Analisando alimento da foto...";
 
   for (const file of Array.from(files)) {
     await new Promise((resolve) => {
@@ -59,10 +64,11 @@ async function mostrarPrevia(event) {
           obsField.value += avisoTemp;
 
           try {
-            const apiKey = "AQ.Ab8RN6J4zkWtQyRY1y9TyDGt2b_bURayDJCh_3rSADNd6Q2Ckg";
+            // Insira sua API Key ativa abaixo:
+            const apiKey = "AQ.Ab8RN6J4zkWtQyRY1y9TyDGt2b_bURayDJCh_3rSADNd6Q2Ckg"; 
             const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
 
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -95,6 +101,10 @@ async function mostrarPrevia(event) {
       reader.readAsDataURL(file);
     });
   }
+
+  // DESTRAVA O BOTÃO APÓS CONCLUIR TODAS AS ANÁLISES
+  btnSalvar.disabled = false;
+  btnSalvar.innerText = "✅ Finalizar, Salvar e Baixar PDF";
 
   event.target.value = '';
 }
@@ -259,6 +269,7 @@ async function gerarPDF(evento, local, responsavel, dataHora, itens, observacoes
     doc.text("Observacoes Gerais:", 14, y);
     doc.setFont('helvetica', 'normal');
     y += 6;
+    
     // Remove caracteres especiais/emojis que corrompem a codificacao do jsPDF
     const obsTratado = observacoes.replace(/[^\x00-\x7F\xA0-\xFF]/g, '');
     const lines = doc.splitTextToSize(obsTratado, 180);
