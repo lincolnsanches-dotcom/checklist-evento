@@ -59,7 +59,7 @@ async function mostrarPrevia(event) {
           obsField.value += avisoTemp;
 
           try {
-            const apiKey = "AQ.Ab8RN6KyEbR_pmotbptgOmpe5jEphFbjpC6i84v4HxcGILu5Xw";
+            const apiKey = "AQ.Ab8RN6J4zkWtQyRY1y9TyDGt2b_bURayDJCh_3rSADNd6Q2Ckg";
             const base64Clean = compressedData.replace(/^data:image\/\w+;base64,/, '');
 
             const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
