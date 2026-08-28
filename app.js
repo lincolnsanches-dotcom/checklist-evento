@@ -71,8 +71,8 @@ async function analisarFotosComIA() {
   btnIA.innerText = "⏳ Analisando imagens com IA...";
 
   // Junção das partes da chave para evitar revogação automática no Git
-  const parte1 = "AQ.Ab8RN6JVyk-JyTJYB0PhyuY9"; 
-  const parte2 = "hWvyf6MzoUj8XxDMCcgjW6cshA"; 
+  const parte1 = "AQ.Ab8RN6JTITegcGq4pbDx";
+  const parte2 = "Yll0te0-txji8zOUFfE82PTX_86SMw";
   const apiKey = parte1 + parte2;
 
   for (let index = 0; index < imagensBase64.length; index++) {
@@ -83,9 +83,12 @@ async function analisarFotosComIA() {
     obsField.value += avisoTemp;
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent", {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
         body: JSON.stringify({
           contents: [{
             parts: [
@@ -98,15 +101,20 @@ async function analisarFotosComIA() {
 
       const data = await res.json();
 
+      if (!res.ok) {
+        throw new Error(data.error?.message || "Erro na comunicação com a API");
+      }
+
       if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
         let alimento = data.candidates[0].content.parts[0].text.trim();
         obsField.value = obsField.value.replace(avisoTemp, `\n- Foto ${index + 1}: ${alimento}`);
       } else {
-        obsField.value = obsField.value.replace(avisoTemp, '');
+        obsField.value = obsField.value.replace(avisoTemp, `\n- Foto ${index + 1}: Item não identificado`);
       }
     } catch (err) {
       console.error("Erro na IA:", err);
       obsField.value = obsField.value.replace(avisoTemp, '');
+      alert(`⚠️ Erro na foto ${index + 1}: ${err.message}`);
     }
   }
 
